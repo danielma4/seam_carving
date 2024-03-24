@@ -86,6 +86,12 @@ class SeamInfo {
   APixel currentPixel;
   double totalWeight; //accumulative from start
   SeamInfo cameFrom; //follow path back to get seam of least energy
+
+  SeamInfo(APixel currentPixel, double totalWeight, SeamInfo cameFrom) {
+    this.currentPixel = currentPixel;
+    this.totalWeight = totalWeight;
+    this.cameFrom = cameFrom;
+  }
 }
 
 //class which represents the grid of seamInfos we want to build up
