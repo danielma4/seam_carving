@@ -4,13 +4,29 @@ import javalib.impworld.*;
 import javalib.worldimages.*;
 import java.awt.Color;
 
-
-
 class Graph {
   CornerSentinel corner;
   
   Graph(CornerSentinel corner) {
     this.corner = corner;
+  }
+  
+  Graph(FromFileImage img) {
+    int width = (int) img.getWidth();
+    int height = (int) img.getHeight();
+    CornerSentinel origin = new CornerSentinel();
+    
+    for (int i = 0; i < width; i++) {
+      origin.addLeft(new BorderSentinel());
+    }
+    for (int row = 0; row < height; row++) {
+      BorderSentinel border = new BorderSentinel();
+      for (int col = 0; col < width; col++) {
+        border.addLeft(new Pixel(img.getColorAt(col, row)));
+      }
+      origin.addRowAbove(border);
+    }
+    this.corner = origin;
   }
   
   Graph() {
@@ -21,15 +37,14 @@ class Graph {
     this.corner.render(img);
   }
   
-  SeamInfo getVerticalSeam() {
-    ArrayList<SeamInfo> seams = this.corner.getVerticalSeams();
-    SeamInfo minWeight = seams.get(0);
-    for (SeamInfo s : seams) {
-      if (s.totalWeight < minWeight.totalWeight) {
-        minWeight = s;
-      }
-    }
-    return minWeight;
+  ASeamInfo getVerticalSeam() {
+    ArrayList<ASeamInfo> seams = this.corner.getVerticalSeams();
+    return new SeamCarvingUtils().getMinWeightSeam(seams);
+  }
+  
+  ASeamInfo getHorizontalSeam() {
+    ArrayList<ASeamInfo> seams = this.corner.getHorizontalSeams();
+    return new SeamCarvingUtils().getMinWeightSeam(seams);
   }
 }
 
@@ -41,17 +56,12 @@ abstract class APixel {
   APixel down;
   
   APixel(Color color, APixel left, APixel right, APixel up, APixel down) {
-    new PixelUtils().checkWellFormed(left, right, up, down);
+    new SeamCarvingUtils().checkWellFormedPixel(left, right, up, down);
     this.color = color;
-    this.left = left;
-    this.right = right;
-    this.up = up;
-    this.down = down;
-    
-    this.left.right = this;
-    this.right.left = this;
-    this.up.down = this;
-    this.down.up = this;
+    this.updateLeft(left);
+    this.updateRight(right);
+    this.updateUp(up);
+    this.updateDown(down);
   }
   
   APixel(Color color) {
@@ -64,7 +74,6 @@ abstract class APixel {
   
   double getBrightness() {
     //colors / 3 / 255
- //   System.out.println(this.color + "" + this.color.getRed());
       return (this.color.getRed()
         + this.color.getBlue()
         + this.color.getGreen()) / 765.0;
@@ -88,39 +97,64 @@ abstract class APixel {
     return Math.sqrt(Math.pow(horizontalEnergy, 2.0) + Math.pow(verticalEnergy, 2.0));
   }
   
+  void updateUp(APixel that) {
+    this.up = that;
+    that.down = this;
+  }
+  
+  void updateRight(APixel that) {
+    this.right = that;
+    that.left = this;
+  }
+  
+  void updateDown(APixel that) {
+    this.down = that;
+    that.up = this;
+  }
+  
+  void updateLeft(APixel that) {
+    this.left = that;
+    that.right = this;
+  }
+  
   void removeVertically() {
-    this.up.down = this.right;
-    this.left.right = this.right;
-    this.down.up = this.right;
-    
     this.right.shiftLeft();
-    this.right.left =this.left;
+    this.left.updateRight(this.right);
+  }
+  
+  void removeHorizontally() {
+    this.down.shiftUp();
+    this.up.updateDown(this.down);
   }
   
   void shiftLeft() {
     this.right.shiftLeft();
-    this.up = this.left.up;
-    this.left.up.down = this;
-    this.down = this.left.down;
-    this.left.down.up = this;
+    this.updateUp(this.left.up);
+    this.updateDown(this.left.down);
+  }
+  
+  void shiftUp() {
+    this.down.shiftUp();
+    this.updateRight(this.up.right);
+    this.updateLeft(this.up.left);
   }
   
   void shiftLeftBorder() {
     
   }
+
+  void shiftUpBorder() {
+  
+  }
   
   void addLeft(APixel newLeft) {
-    this.left.right = newLeft;
-    newLeft.left = this.left;
-    this.left = newLeft;
-    newLeft.right = this;
+    this.left.updateRight(newLeft);
+    this.updateLeft(newLeft);
   }
   
   void addAbove(APixel newUp) {
-    this.up.down = newUp;
-    newUp.up = this.up;
-    this.up = newUp;
-    newUp.down = this;
+    this.up.updateDown(newUp);
+    this.updateUp(newUp);
   }
   
   void addRowAboveHelp(APixel newTop) {
@@ -137,43 +171,54 @@ abstract class APixel {
     this.down.renderDownwards(img, row + 1, col);
   }
   
-  ArrayList<SeamInfo> rowInfo(ArrayList<SeamInfo> soFar, APixel start) {
+  ArrayList<ASeamInfo> rowInfo(ArrayList<ASeamInfo> soFar, APixel start) {
     if (!this.equals(start)) {
-      soFar.add(new SeamInfo(this, this.getEnergy(), null));
+      soFar.add(new VerticalSeamInfo(this, this.getEnergy(), null));
       return this.right.rowInfo(soFar, start);
     } else {
       return soFar;
     }
   }
   
-  ArrayList<SeamInfo> rowInfo(ArrayList<SeamInfo> prevRow, ArrayList<SeamInfo> currRow, int currCol) {
-    if (currCol == prevRow.size()) {
-      return currRow;
+  ArrayList<ASeamInfo> colInfo(ArrayList<ASeamInfo> soFar, APixel start) {
+    if (!this.equals(start)) {
+      soFar.add(new HorizontalSeamInfo(this, this.getEnergy(), null));
+      return this.down.colInfo(soFar, start);
     } else {
-      SeamInfo prevTopLeft;
-      SeamInfo prevTop = prevRow.get(currCol);
-      SeamInfo prevTopRight;
-      SeamInfo min;
-      if (currCol == 0) {
-        prevTopRight = prevRow.get(currCol + 1);
-        min = prevTopRight.leastWeight(prevTop);
-      } else if (currCol == prevRow.size() - 1) {
-        prevTopLeft = prevRow.get(currCol - 1);
-        min = prevTop.leastWeight(prevTopLeft);
-      } else {
-        prevTopRight = prevRow.get(currCol + 1);
-        prevTopLeft = prevRow.get(currCol - 1);
-        min = prevTopRight.leastWeight(prevTop).leastWeight(prevTopLeft);
-      }
-      currRow.add(new SeamInfo(this, min.totalWeight + this.getEnergy(), min));
-      return this.right.rowInfo(prevRow, currRow, currCol + 1);
+      return soFar;
     }
   }
   
-  ArrayList<SeamInfo> accumulateSeams(ArrayList<SeamInfo> prevRow) {
-    ArrayList<SeamInfo> currRow = this.right.rowInfo(prevRow, new ArrayList<SeamInfo>(), 0);
-    ArrayList<SeamInfo> finalRow = this.down.accumulateSeams(currRow);
+  ArrayList<ASeamInfo> rowInfo(ArrayList<ASeamInfo> prevRow, ArrayList<ASeamInfo> currRow) {
+    if (currRow.size() == prevRow.size()) {
+      return currRow;
+    } else {
+      ASeamInfo min = new SeamCarvingUtils().getMinWeightAdjacentSeam(prevRow, currRow.size());
+      currRow.add(new VerticalSeamInfo(this, min.totalWeight + this.getEnergy(), min));
+      return this.right.rowInfo(prevRow, currRow);
+    }
+  }
+  
+  ArrayList<ASeamInfo> colInfo(ArrayList<ASeamInfo> prevCol, ArrayList<ASeamInfo> currCol) {
+    if (currCol.size() == prevCol.size()) {
+      return currCol;
+    } else {
+      ASeamInfo min = new SeamCarvingUtils().getMinWeightAdjacentSeam(prevCol, currCol.size());
+      currCol.add(new HorizontalSeamInfo(this, min.totalWeight + this.getEnergy(), min));
+      return this.down.colInfo(prevCol, currCol);
+    }
+  }
+  
+  ArrayList<ASeamInfo> accumulateRows(ArrayList<ASeamInfo> prevRow) {
+    ArrayList<ASeamInfo> currRow = this.right.rowInfo(prevRow, new ArrayList<ASeamInfo>());
+    ArrayList<ASeamInfo> finalRow = this.down.accumulateRows(currRow);
     return finalRow;
+  }
+  
+  ArrayList<ASeamInfo> accumulateCols(ArrayList<ASeamInfo> prevCol) {
+    ArrayList<ASeamInfo> currCol = this.down.colInfo(prevCol, new ArrayList<ASeamInfo>());
+    ArrayList<ASeamInfo> finalCol = this.right.accumulateCols(currCol);
+    return finalCol;
   }
 }
 
@@ -207,6 +252,10 @@ abstract class Sentinel extends APixel{
   void shiftLeft() {
     
   }
+  
+  void shiftUp() {
+    
+  }
 }
 
 class CornerSentinel extends Sentinel {
@@ -231,22 +280,32 @@ class CornerSentinel extends Sentinel {
     
   }
   
-  void remove() {
-    
-  }
-  
   void removeVertically() {
     
   }
   
-  ArrayList<SeamInfo> getVerticalSeams() {
-    ArrayList<SeamInfo> initialRow = this.right.rowInfo(new ArrayList<SeamInfo>(), this);
-    ArrayList<SeamInfo> finalRow = this.down.accumulateSeams(initialRow);
+  void removeHorizontally() {
+    
+  }
+  
+  ArrayList<ASeamInfo> getVerticalSeams() {
+    ArrayList<ASeamInfo> initialRow = this.right.rowInfo(new ArrayList<ASeamInfo>(), this);
+    ArrayList<ASeamInfo> finalRow = this.down.accumulateRows(initialRow);
     return finalRow;
   }
   
-  ArrayList<SeamInfo> accumulateSeams(ArrayList<SeamInfo> prevRow) {
+  ArrayList<ASeamInfo> getHorizontalSeams() {
+    ArrayList<ASeamInfo> initialCol = this.down.colInfo(new ArrayList<ASeamInfo>(), this);
+    ArrayList<ASeamInfo> finalCol = this.right.accumulateCols(initialCol);
+    return finalCol;
+  }
+  
+  ArrayList<ASeamInfo> accumulateRows(ArrayList<ASeamInfo> prevRow) {
     return prevRow;
+  }
+  
+  ArrayList<ASeamInfo> accumulateCols(ArrayList<ASeamInfo> prevCol) {
+    return prevCol;
   }
 }
 
@@ -257,20 +316,25 @@ class BorderSentinel extends Sentinel {
   }
   
   void removeVertically() {
-    this.up.down = this.right;
-    this.left.right = this.right;
-    this.down.up = this.right;
-    
     this.right.shiftLeftBorder();
-    this.right.left =this.left;
+    this.left.updateRight(this.right);
+  }
+  
+  void removeHorizontally() {
+    this.down.shiftUpBorder();
+    this.up.updateDown(this.down);
   }
   
   void shiftLeftBorder() {
     this.right.shiftLeftBorder();
-    this.up = this.left.up;
-    this.left.up.down = this;
-    this.down = this.left.down;
-    this.left.down.up = this;
+    this.updateUp(this.left.up);
+    this.updateDown(this.left.down);
+  }
+  
+  void shiftUpBorder() {
+    this.down.shiftUpBorder();
+    this.updateRight(this.up.right);
+    this.updateLeft(this.up.left);
   }
 }
 
@@ -285,29 +349,18 @@ class Pixel extends APixel {
   }
 }
 
-class PixelUtils {
-  void checkWellFormed(APixel left, APixel right, APixel up, APixel down) {
-    if (left.up != up.left
-        || right.up != up.right
-        || right.down != down.right
-        || left.down != down.left) {
-      throw new IllegalArgumentException("Pixel not well-formed!");
-    }
-  } 
-}
-
-class SeamInfo {
+abstract class ASeamInfo {
   APixel currentPixel;
   double totalWeight; //accumulative from start
-  SeamInfo cameFrom; //follow path back to get seam of least energy
+  ASeamInfo cameFrom; //follow path back to get seam of least energy
 
-  SeamInfo(APixel currentPixel, double totalWeight, SeamInfo cameFrom) {
+  ASeamInfo(APixel currentPixel, double totalWeight, ASeamInfo cameFrom) {
     this.currentPixel = currentPixel;
     this.totalWeight = totalWeight;
     this.cameFrom = cameFrom;
   }
 
-  SeamInfo leastWeight(SeamInfo that) {
+  ASeamInfo leastWeight(ASeamInfo that) {
     if (this.totalWeight < that.totalWeight) {
       return this;
     } else {
@@ -315,12 +368,7 @@ class SeamInfo {
     }
   }
   
-  void remove() {
-    if (this.cameFrom != null) {
-      this.cameFrom.remove();
-    }
-    currentPixel.removeVertically();
-  }
+  abstract void remove();
   
   void paint(Color color) {
     if (this.cameFrom != null) {
@@ -330,22 +378,85 @@ class SeamInfo {
   }
 }
 
+class VerticalSeamInfo extends ASeamInfo{
+
+  VerticalSeamInfo(APixel currentPixel, double totalWeight, ASeamInfo cameFrom) {
+    super(currentPixel, totalWeight, cameFrom);
+  }
+  
+  void remove() {
+    if (this.cameFrom != null) {
+      this.cameFrom.remove();
+    }
+    currentPixel.removeVertically();
+  }
+  
+}
+
+class HorizontalSeamInfo extends ASeamInfo{
+
+  HorizontalSeamInfo(APixel currentPixel, double totalWeight, ASeamInfo cameFrom) {
+    super(currentPixel, totalWeight, cameFrom);
+  }
+  
+  void remove() {
+    if (this.cameFrom != null) {
+      this.cameFrom.remove();
+    }
+    currentPixel.removeHorizontally();
+  }
+  
+}
+
+class SeamCarvingUtils {
+  void checkWellFormedPixel(APixel left, APixel right, APixel up, APixel down) {
+    if (left.up != up.left
+        || right.up != up.right
+        || right.down != down.right
+        || left.down != down.left) {
+      throw new IllegalArgumentException("Pixel not well-formed!");
+    }
+  }
+  
+  ASeamInfo getMinWeightSeam(ArrayList<ASeamInfo> seams) {
+    ASeamInfo minWeight = seams.get(0);
+    for (ASeamInfo s : seams) {
+      if (s.totalWeight < minWeight.totalWeight) {
+        minWeight = s;
+      }
+    }
+    return minWeight;
+  }
+  
+  ASeamInfo getMinWeightAdjacentSeam(ArrayList<ASeamInfo> adjacentSeams, int index) {
+    ArrayList<ASeamInfo> seams = new ArrayList<ASeamInfo>();
+    if (index != 0) {
+      seams.add(adjacentSeams.get(index - 1));
+    }
+    seams.add(adjacentSeams.get(index));
+    if (index != adjacentSeams.size() - 1) {
+      seams.add(adjacentSeams.get(index + 1));
+    }
+    return this.getMinWeightSeam(seams);
+  }
+}
+
 class SeamCarver extends World {
   
   Graph graph;
   int width;
   int height;
   int time;
-  SeamInfo seam;
+  ASeamInfo seamToRemove;
+  boolean paused;
   
   SeamCarver(String filepath) {
     FromFileImage img = new FromFileImage(filepath);
-    SeamCarverUtils u = new SeamCarverUtils();
-    this.graph = u.imageToGraph(img);
+    this.graph = new Graph(img);
     this.width = (int) img.getWidth();
     this.height = (int) img.getHeight();
     this.time = 0;
-    this.seam = this.graph.getVerticalSeam();
+    this.paused = false;
   }
   
   public WorldScene makeScene() {
@@ -357,44 +468,36 @@ class SeamCarver extends World {
   }
   
   public void onTick() {
-    if (this.time % 2 == 0) {
-      this.seam = this.graph.getVerticalSeam();
-      this.seam.paint(Color.RED);
-    } else {
-      this.seam.remove();
+    if (!paused) {
+      if (this.time % 2 == 0) {
+        this.seamToRemove = this.graph.getVerticalSeam(); 
+        this.seamToRemove.paint(Color.RED);
+      } else {
+        this.seamToRemove.remove();
+        this.width--;
+      }
+      this.time++;
     }
-    this.time++;
   }
   
   public void onKeyEvent(String key) {
-    if (key.equals("p")) {
-      this.seam = this.graph.getVerticalSeam();
-      this.seam.paint(Color.RED);
-    } else if (key.equals("r")) {
-      this.seam.remove();
+    if (key.equals(" ")) {
+      this.paused = !this.paused;
+    }
+    if (paused && key.equals("v")) {
+      if (this.time % 2 == 0) {
+        this.seamToRemove = this.graph.getVerticalSeam();
+        this.seamToRemove.paint(Color.RED);
+      } else {
+        this.seamToRemove.remove();
+        this.width--;
+      }
+      this.time++;
     }
   }
-}
-
-class SeamCarverUtils {
-  Graph imageToGraph(FromFileImage img) {
-    int width = (int) img.getWidth();
-    int height = (int) img.getHeight();
-    
-    CornerSentinel origin = new CornerSentinel();
-    
-    for (int i = 0; i < width; i++) {
-      origin.addLeft(new BorderSentinel());
-    }
-    for (int row = 0; row < height; row++) {
-      BorderSentinel border = new BorderSentinel();
-      for (int col = 0; col < width; col++) {
-        border.addLeft(new Pixel(img.getColorAt(col, row)));
-      }
-      origin.addRowAbove(border);
-    }
-    
-    return new Graph(origin);
+  
+  public boolean shouldWorldEnd() {
+    return this.width == 1;
   }
 }
 
@@ -402,12 +505,6 @@ class ExamplesSeamCarver {
   SeamCarver s = new SeamCarver("src/balloons.jpeg");
   
   void testBang(Tester t) {
-    s.bigBang(s.width, s.height, 0.1);
+    s.bigBang(s.width, s.height, 0.0000001);
   }
-  
-//  void testSeans(Tester t) {
-//    s.graph.getVerticalSeam().remove();
-//    t.checkExpect(s.graph, 1);
-//  }
-  
 }
