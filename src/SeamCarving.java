@@ -21,11 +21,15 @@ class Graph {
     int height = (int) img.getHeight();
     CornerSentinel origin = new CornerSentinel();
     
+    // Creates a row of BorderSentinels as next to the Corner sentinels,
+    // with one for each pixel in the width of the image
     for (int i = 0; i < width; i++) {
       origin.addLeft(new BorderSentinel());
     }
+    // Iterates through each row of the image and creates the appropriate border and pixels
     for (int row = 0; row < height; row++) {
       BorderSentinel border = new BorderSentinel();
+      // Iterates through each pixel in this row of img and creates the correctly colored pixel
       for (int col = 0; col < width; col++) {
         border.addLeft(new Pixel(img.getColorAt(col, row)));
       }
@@ -525,6 +529,8 @@ class SeamCarvingUtils {
   // Returns the seam of lowest weight in an ArrayList of seams
   ASeamInfo getMinWeightSeam(ArrayList<ASeamInfo> seams) {
     ASeamInfo minWeight = seams.get(0);
+    // Iterates through every seam in seams and updates minWeight if the current seam has a
+    // lower weight than the previous minimum weight seam
     for (ASeamInfo s : seams) {
       minWeight = s.leastWeight(minWeight);
     }
@@ -613,10 +619,12 @@ class SeamCarver extends World {
 }
 
 class ExamplesSeamCarver {
+  
   SeamCarver s = new SeamCarver("src/balloons.jpeg");
-  void testBang(Tester t) {
-    s.bigBang(s.width, s.height, 0.0000001);
-  }
+  
+//  void testBang(Tester t) {
+//    s.bigBang(s.width, s.height, 0.0000001);
+//  }
 
   boolean testAPixel(Tester t) {
     //3x3 example
@@ -912,7 +920,7 @@ class ExamplesSeamCarver {
             && t.checkExpect(midLeft.right, midRight)
             && t.checkExpect(border3.right, topMid)
             && t.checkExpect(corner.right, border5);
-
+    
     return testGetVertSeam && testPaint && testRemove
             && testShiftBorder && testLeastWeight;
   }
@@ -928,4 +936,116 @@ class ExamplesSeamCarver {
             && t.checkInexact(g.getVerticalSeam().totalWeight,
             3.55688, .00001);
   }
+  
+  boolean testSeamCarvingUtils(Tester t) {
+    APixel topLeft = new Pixel(Color.RED);
+    APixel top = new Pixel(Color.ORANGE);
+    APixel topRight = new Pixel(Color.YELLOW);
+    APixel left = new Pixel(Color.GREEN);
+    APixel right = new Pixel(Color.BLUE);
+    APixel botLeft = new Pixel(Color.GRAY);
+    APixel bot = new Pixel(Color.WHITE);
+    APixel botRight = new Pixel(Color.BLACK);
+    topLeft.updateRight(top);
+    top.updateRight(topRight);
+    topLeft.updateDown(left);
+    topRight.updateDown(right);
+    left.updateDown(botLeft);
+    right.updateDown(botRight);
+    botLeft.updateRight(bot);
+    bot.updateRight(botRight);
+    SeamCarvingUtils u = new SeamCarvingUtils();
+    
+    boolean wellFormedTests = t.checkNoException(u, "checkWellFormedPixel", left, right, top, bot)
+        && t.checkException(new IllegalArgumentException("Pixel not well-formed!"),
+            u, "checkWellFormedPixel", right, left, top, bot);
+    
+    Graph sadMarks = new Graph(new FromFileImage("src/sadmarks.png"));
+    ArrayList<ASeamInfo> seams = sadMarks.corner.getVerticalSeams();
+    
+    boolean smallestSeamsTests = t.checkExpect(u.getMinWeightSeam(seams), seams.get(147))
+        && t.checkExpect(u.getMinWeightAdjacentSeam(seams, 0), seams.get(1))
+        && t.checkExpect(u.getMinWeightAdjacentSeam(seams, 1), seams.get(2))
+        && t.checkExpect(u.getMinWeightAdjacentSeam(seams, 53), seams.get(52))
+        && t.checkExpect(u.getMinWeightAdjacentSeam(seams, 99), seams.get(98))
+        && t.checkExpect(u.getMinWeightAdjacentSeam(seams, 299), seams.get(298));
+    
+    return wellFormedTests && smallestSeamsTests;
+  }
+  
+  boolean testSentinels(Tester t) {
+    CornerSentinel corner = new CornerSentinel();
+    corner.addLeft(new BorderSentinel());
+    corner.addLeft(new BorderSentinel());
+    corner.addLeft(new BorderSentinel());
+    BorderSentinel row1 = new BorderSentinel();
+    row1.addLeft(new Pixel(Color.RED));
+    row1.addLeft(new Pixel(Color.ORANGE));
+    row1.addLeft(new Pixel(Color.YELLOW));
+    BorderSentinel row2 = new BorderSentinel();
+    row2.addLeft(new Pixel(Color.GREEN));
+    row2.addLeft(new Pixel(Color.CYAN));
+    row2.addLeft(new Pixel(Color.BLUE));
+    BorderSentinel row3 = new BorderSentinel();
+    row3.addLeft(new Pixel(Color.BLACK));
+    row3.addLeft(new Pixel(Color.WHITE));
+    row3.addLeft(new Pixel(Color.GRAY));
+    
+    boolean checkInits = t.checkExpect(corner.right, corner.left.left.left)
+        && t.checkExpect(row1.right.right.down, row1.left.left)
+        && t.checkExpect(row2.up, row2)
+        && t.checkExpect(row3.right.down, row3.down.left.up.left.left);
+    
+    corner.addRowAbove(row1);
+    corner.addRowAbove(row2);
+    corner.addRowAbove(row3);
+    
+    boolean checkGrid = t.checkExpect(corner.right, corner.left.left.left)
+        && t.checkExpect(row1.right.right.down, row2.left.left)
+        && t.checkExpect(row1.right.right.down, row2.right.right)
+        && t.checkExpect(row2.up, row1)
+        && t.checkExpect(row3.right.down, row3.down.left.up.left.left.down)
+        && t.checkExpect(row3.right.down, corner.right);
+    
+    boolean energies = t.checkExpect(corner.getEnergy(), 0.0)
+        && t.checkExpect(row1.getEnergy(), 0.0)
+        && t.checkExpect(row3.getEnergy(), 0.0)
+        && t.checkInexact(row2.right.getEnergy(), 3.0030, 0.0001)
+        && t.checkInexact(row1.right.right.getEnergy(), 1.7950, 0.0001);
+    
+    corner.removeVertically();
+    
+    boolean testCornerRemoval = t.checkExpect(corner.right.left, corner)
+        && t.checkExpect(corner.left.right, corner)
+        && t.checkExpect(corner.up.down, corner)
+        && t.checkExpect(corner.down.up, corner);
+    
+    APixel border1Up = corner.right.up;
+    APixel border1Down = corner.right.down;
+    APixel border2Up = corner.right.right.up;
+    APixel border2Down = corner.right.right.down;
+    
+    corner.right.shiftLeft();
+    
+    boolean testRegularShiftLeft = t.checkExpect(corner.right.up, border1Up)
+        && t.checkExpect(corner.right.down, border1Down)
+        && t.checkExpect(corner.right.right.up, border2Up)
+        && t.checkExpect(corner.right.right.down, border2Down);
+    
+    corner.right.right.shiftLeftBorder();
+    
+    // Note: the links in the grid are slightly messed up when looked at as a whole
+    // due to the use of the shiftLeftBorder method outside of the removeVertical method
+    // and without the removal of a full seam
+    boolean testBorderShiftLeft = t.checkExpect(corner.right.up, border1Up)
+        && t.checkExpect(corner.right.down, border1Down)
+        && t.checkExpect(corner.right.right.up, border1Up)
+        && t.checkExpect(corner.right.right.down, border1Down)
+        && t.checkExpect(border1Up.down, corner.right.right)
+        && t.checkExpect(border1Down.up, corner.right.right);
+    
+    return checkInits && checkGrid && energies && testCornerRemoval
+        && testRegularShiftLeft && testBorderShiftLeft;
+  }
+  
 }
