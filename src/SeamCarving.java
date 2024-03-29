@@ -614,17 +614,13 @@ class SeamCarver extends World {
 
 class ExamplesSeamCarver {
   SeamCarver s = new SeamCarver("src/balloons.jpeg");
-
-  /*
   void testBang(Tester t) {
     s.bigBang(s.width, s.height, 0.0000001);
   }
 
-   */
-
   boolean testAPixel(Tester t) {
     //3x3 example
-    APixel corner = new CornerSentinel();
+    CornerSentinel corner = new CornerSentinel();
     //bottom up, left to right
     APixel border1 = new BorderSentinel();
     APixel border2 = new BorderSentinel();
@@ -641,6 +637,14 @@ class ExamplesSeamCarver {
     APixel botLeft = new Pixel(new Color(3, 6, 9));
     APixel botMid = new Pixel(new Color(44, 22, 11));
     APixel botRight = new Pixel(new Color(12, 24, 255));
+
+    //new row
+    APixel newRow1 = new Pixel(Color.RED);
+    APixel newRow2 = new Pixel(Color.GREEN);
+    APixel newRow3 = new Pixel(Color.ORANGE);
+
+    newRow1.updateRight(newRow2);
+    newRow2.updateRight(newRow3);
 
     border1.updateRight(botLeft);
     botLeft.updateRight(botMid);
@@ -676,11 +680,252 @@ class ExamplesSeamCarver {
     midRight.updateDown(botRight);
     botRight.updateDown(border6);
 
-    boolean checkConstructorException = t.checkConstructorException(
+    boolean testConstructorException = t.checkConstructorException(
             new IllegalArgumentException("Pixel not well-formed!"),
             "Pixel",
             Color.RED, border1, border2, border3, border4);
 
-    return checkConstructorException;
+    boolean testUpdateMutation = t.checkExpect(border1.up,
+            border2)
+            && t.checkExpect(border2.down,
+            border1)
+            && t.checkExpect(border1.right,
+            botLeft)
+            && t.checkExpect(botLeft.left,
+            border1)
+            && t.checkExpect(border1.left,
+            botRight)
+            && t.checkExpect(botRight.right,
+            border1)
+            && t.checkExpect(border1.down,
+            corner)
+            && t.checkExpect(corner.up,
+            border1)
+            && t.checkExpect(mid.left,
+            midLeft)
+            && t.checkExpect(mid.up,
+            topMid)
+            && t.checkExpect(mid.right,
+            midRight)
+            && t.checkExpect(mid.down,
+            botMid);
+
+    boolean testBrightness = t.checkInexact(topLeft.getBrightness(),
+            0.392156, .00001)
+            && t.checkInexact(topMid.getBrightness(),
+            .065359, .00001)
+            && t.checkInexact(topRight.getBrightness(),
+            .150326, .00001)
+            && t.checkInexact(midLeft.getBrightness(),
+            .0078431, .00001)
+            && t.checkInexact(mid.getBrightness(),
+            .0196078, .00001)
+            && t.checkInexact(midRight.getBrightness(),
+            .0313725, .00001)
+            && t.checkInexact(botLeft.getBrightness(),
+            .0235294, .00001)
+            && t.checkInexact(botMid.getBrightness(),
+            .100653, .00001)
+            && t.checkInexact(botRight.getBrightness(),
+            .38039, .00001)
+            && t.checkInexact(border1.getBrightness(),
+            0.0, .00001);
+
+    boolean testEnergy = t.checkInexact(topLeft.getEnergy(),
+            .151142, .00001)
+            && t.checkInexact(topMid.getEnergy(),
+            .462530, .00001)
+            && t.checkInexact(topRight.getEnergy(),
+            .171406, .00001)
+            && t.checkInexact(midLeft.getEnergy(),
+            .765286, .00001)
+            && t.checkInexact(mid.getEnergy(),
+            .339265, .00001)
+            && t.checkInexact(midRight.getEnergy(),
+            .536250, .00001)
+            && t.checkInexact(botLeft.getEnergy(),
+            .221471, .00001)
+            && t.checkInexact(botMid.getEnergy(),
+            .738755, .00001)
+            && t.checkInexact(botRight.getEnergy(),
+            .235765, .00001);
+
+    ArrayList<ASeamInfo> firstRowInfo = topLeft.rowInfo(
+            new ArrayList<>(), border3);
+
+    //using getEnergy to avoid inexact values, already tested getEnergy above
+    boolean testFirstRow = t.checkExpect(firstRowInfo.get(0),
+            new VerticalSeamInfo(topLeft, topLeft.getEnergy(), null))
+            && t.checkExpect(firstRowInfo.get(1),
+            new VerticalSeamInfo(topMid, topMid.getEnergy(), null))
+            && t.checkExpect(firstRowInfo.get(firstRowInfo.size() - 1),
+            new VerticalSeamInfo(topRight, topRight.getEnergy(), null));
+
+    ArrayList<ASeamInfo> nextRowInfo = midLeft.rowInfo(firstRowInfo, new ArrayList<>());
+
+    //can't test inexact numbers
+    boolean testNextRowInfo = t.checkExpect(nextRowInfo.get(0).cameFrom,
+            firstRowInfo.get(0))
+            && t.checkExpect(nextRowInfo.get(1).cameFrom,
+            firstRowInfo.get(0))
+            //lol
+            && t.checkExpect(t.checkExpect(nextRowInfo.get(2).cameFrom,
+                    firstRowInfo.get(2)), true);
+
+    ArrayList<ASeamInfo> finalRow = border2.accumulateRows(firstRowInfo);
+
+    boolean testAccumulateRows = t.checkExpect(finalRow.get(0).cameFrom,
+            nextRowInfo.get(1))
+            && t.checkExpect(finalRow.get(1).cameFrom,
+            nextRowInfo.get(1))
+            && t.checkExpect(finalRow.get(2).cameFrom,
+            nextRowInfo.get(1));
+
+    botLeft.removeVertically();
+
+    boolean testRemoveVertically = t.checkExpect(border1.right, botMid)
+            && t.checkExpect(botMid.up, midLeft)
+            && t.checkExpect(botMid.down, border4);
+
+    botMid.addLeft(botLeft);
+
+    boolean testAddLeft = t.checkExpect(botMid.left, botLeft)
+            && t.checkExpect(border1.right, botLeft);
+
+    topMid.shiftLeft();
+
+    boolean testShift = t.checkExpect(topMid.up, border4)
+            && t.checkExpect(topMid.down, midLeft)
+            && t.checkExpect(midLeft.up, topMid)
+            && t.checkExpect(border4.down, topMid)
+            && t.checkExpect(topLeft.right, topMid);
+
+    topLeft.addAbove(newRow1);
+
+    boolean testAddAbove = t.checkExpect(topLeft.up, newRow1)
+            && t.checkExpect(newRow1.down, topLeft);
+
+    return testConstructorException && testBrightness && testEnergy
+            && testUpdateMutation && testFirstRow && testNextRowInfo
+            && testAccumulateRows && testRemoveVertically && testAddAbove
+            && testAddLeft && testShift;
+  }
+
+  boolean testMoreMutationAndSeamInfo(Tester t) {
+    //3x3 example
+    CornerSentinel corner = new CornerSentinel();
+    //bottom up, left to right
+    APixel border1 = new BorderSentinel();
+    APixel border2 = new BorderSentinel();
+    APixel border3 = new BorderSentinel();
+    APixel border4 = new BorderSentinel();
+    APixel border5 = new BorderSentinel();
+    APixel border6 = new BorderSentinel();
+    APixel topLeft = new Pixel(new Color(100, 100, 100));
+    APixel topMid = new Pixel(new Color(20, 20, 10));
+    APixel topRight = new Pixel(new Color(15, 25, 75));
+    APixel midLeft = new Pixel(new Color(1, 2, 3));
+    APixel mid = new Pixel(new Color(4, 5, 6));
+    APixel midRight = new Pixel(new Color(7, 8, 9));
+    APixel botLeft = new Pixel(new Color(3, 6, 9));
+    APixel botMid = new Pixel(new Color(44, 22, 11));
+    APixel botRight = new Pixel(new Color(12, 24, 255));
+
+    //new row
+    APixel newRow1 = new Pixel(Color.RED);
+    APixel newRow2 = new Pixel(Color.GREEN);
+    APixel newRow3 = new Pixel(Color.ORANGE);
+
+    newRow1.updateRight(newRow2);
+    newRow2.updateRight(newRow3);
+
+    border1.updateRight(botLeft);
+    botLeft.updateRight(botMid);
+    botMid.updateRight(botRight);
+    botRight.updateRight(border1);
+    border2.updateRight(midLeft);
+    midLeft.updateRight(mid);
+    mid.updateRight(midRight);
+    midRight.updateRight(border2);
+    border3.updateRight(topLeft);
+    topLeft.updateRight(topMid);
+    topMid.updateRight(topRight);
+    topRight.updateRight(border3);
+    corner.updateRight(border4);
+    border4.updateRight(border5);
+    border5.updateRight(border6);
+    border6.updateRight(corner);
+
+    corner.updateDown(border3);
+    border3.updateDown(border2);
+    border2.updateDown(border1);
+    border1.updateDown(corner);
+    border4.updateDown(topLeft);
+    topLeft.updateDown(midLeft);
+    midLeft.updateDown(botLeft);
+    botLeft.updateDown(border4);
+    border5.updateDown(topMid);
+    topMid.updateDown(mid);
+    mid.updateDown(botMid);
+    botMid.updateDown(border5);
+    border6.updateDown(topRight);
+    topRight.updateDown(midRight);
+    midRight.updateDown(botRight);
+    botRight.updateDown(border6);
+
+    ArrayList<ASeamInfo> finalRow = corner.getVerticalSeams();
+
+    boolean testGetVertSeam = t.checkInexact(finalRow.get(0).totalWeight,
+            .711879, .00001)
+            && t.checkInexact(finalRow.get(1).totalWeight,
+            1.22916, .00001)
+            && t.checkInexact(finalRow.get(2).totalWeight,
+            .726174, .00001);
+
+    boolean testLeastWeight = t.checkExpect(finalRow.get(0).leastWeight(finalRow.get(1)),
+            finalRow.get(0))
+            && t.checkExpect(finalRow.get(0).leastWeight(finalRow.get(2)),
+            finalRow.get(0));
+
+    border3.shiftLeftBorder();
+
+    boolean testShiftBorder = t.checkExpect(border3.up, border6)
+            && t.checkExpect(border3.down, midRight)
+            && t.checkExpect(border6.down, border3)
+            && t.checkExpect(midRight.up, border3);
+
+    finalRow.get(0).paint(Color.RED);
+    finalRow.get(0).cameFrom.cameFrom.paint(Color.RED);
+
+    boolean testPaint = t.checkExpect(botLeft.color,
+            Color.RED)
+            && t.checkExpect(mid.color,
+            Color.RED)
+            && t.checkExpect(topLeft.color,
+            Color.RED)
+            && t.checkExpect(border4.color,
+            Color.RED);
+
+    finalRow.get(0).remove();
+
+    boolean testRemove = t.checkExpect(border1.right, botMid)
+            && t.checkExpect(midLeft.right, midRight)
+            && t.checkExpect(border3.right, topMid)
+            && t.checkExpect(corner.right, border5);
+
+    return testGetVertSeam && testPaint && testRemove
+            && testShiftBorder && testLeastWeight;
+  }
+
+  boolean testGraph(Tester t) {
+    FromFileImage img = new FromFileImage("src/sadmarks.png");
+    Graph g = new Graph(img);
+
+    return t.checkExpect(g.corner.right.color,
+            Color.BLACK)
+            && t.checkExpect(g.corner.down.right.color,
+            Color.WHITE)
+            && t.checkInexact(g.getVerticalSeam().totalWeight,
+            3.55688, .00001);
   }
 }
