@@ -614,8 +614,73 @@ class SeamCarver extends World {
 
 class ExamplesSeamCarver {
   SeamCarver s = new SeamCarver("src/balloons.jpeg");
-  
+
+  /*
   void testBang(Tester t) {
     s.bigBang(s.width, s.height, 0.0000001);
+  }
+
+   */
+
+  boolean testAPixel(Tester t) {
+    //3x3 example
+    APixel corner = new CornerSentinel();
+    //bottom up, left to right
+    APixel border1 = new BorderSentinel();
+    APixel border2 = new BorderSentinel();
+    APixel border3 = new BorderSentinel();
+    APixel border4 = new BorderSentinel();
+    APixel border5 = new BorderSentinel();
+    APixel border6 = new BorderSentinel();
+    APixel topLeft = new Pixel(new Color(100, 100, 100));
+    APixel topMid = new Pixel(new Color(20, 20, 10));
+    APixel topRight = new Pixel(new Color(15, 25, 75));
+    APixel midLeft = new Pixel(new Color(1, 2, 3));
+    APixel mid = new Pixel(new Color(4, 5, 6));
+    APixel midRight = new Pixel(new Color(7, 8, 9));
+    APixel botLeft = new Pixel(new Color(3, 6, 9));
+    APixel botMid = new Pixel(new Color(44, 22, 11));
+    APixel botRight = new Pixel(new Color(12, 24, 255));
+
+    border1.updateRight(botLeft);
+    botLeft.updateRight(botMid);
+    botMid.updateRight(botRight);
+    botRight.updateRight(border1);
+    border2.updateRight(midLeft);
+    midLeft.updateRight(mid);
+    mid.updateRight(midRight);
+    midRight.updateRight(border2);
+    border3.updateRight(topLeft);
+    topLeft.updateRight(topMid);
+    topMid.updateRight(topRight);
+    topRight.updateRight(border3);
+    corner.updateRight(border4);
+    border4.updateRight(border5);
+    border5.updateRight(border6);
+    border6.updateRight(corner);
+
+    corner.updateDown(border3);
+    border3.updateDown(border2);
+    border2.updateDown(border1);
+    border1.updateDown(corner);
+    border4.updateDown(topLeft);
+    topLeft.updateDown(midLeft);
+    midLeft.updateDown(botLeft);
+    botLeft.updateDown(border4);
+    border5.updateDown(topMid);
+    topMid.updateDown(mid);
+    mid.updateDown(botMid);
+    botMid.updateDown(border5);
+    border6.updateDown(topRight);
+    topRight.updateDown(midRight);
+    midRight.updateDown(botRight);
+    botRight.updateDown(border6);
+
+    boolean checkConstructorException = t.checkConstructorException(
+            new IllegalArgumentException("Pixel not well-formed!"),
+            "Pixel",
+            Color.RED, border1, border2, border3, border4);
+
+    return checkConstructorException;
   }
 }
