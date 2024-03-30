@@ -93,7 +93,7 @@ abstract class APixel {
   // Computes the brightness of this pixel
   double getBrightness() {
     //colors / 3 / 255
-      return (this.color.getRed()
+    return (this.color.getRed()
         + this.color.getBlue()
         + this.color.getGreen()) / 765.0;
   }
@@ -113,7 +113,7 @@ abstract class APixel {
             + this.up.right.getBrightness()) -
         (this.down.left.getBrightness()
             + (2 * this.down.getBrightness())
-            + this.up.right.getBrightness());
+            + this.down.right.getBrightness());
     return Math.sqrt(Math.pow(horizontalEnergy, 2.0) + Math.pow(verticalEnergy, 2.0));
   }
   
@@ -273,7 +273,7 @@ abstract class APixel {
 }
 
 // Represents a Sentinel pixel
-abstract class ASentinel extends APixel{
+abstract class ASentinel extends APixel {
   
   // Creates a Sentinel that points to the given neighbors. The color of all Sentinels is black
   ASentinel(APixel left, APixel right, APixel up, APixel down) {
@@ -480,7 +480,7 @@ abstract class ASeamInfo {
 }
 
 // Represents a SeamInfo from the top to the bottom of an image
-class VerticalSeamInfo extends ASeamInfo{
+class VerticalSeamInfo extends ASeamInfo {
   
   // Creates a VerticalSeamInfo with the given pixel, weight, and cameFrom
   VerticalSeamInfo(APixel currentPixel, double totalWeight, ASeamInfo cameFrom) {
@@ -622,10 +622,12 @@ class ExamplesSeamCarver {
   
   SeamCarver s = new SeamCarver("src/balloons.jpeg");
   
-//  void testBang(Tester t) {
-//    s.bigBang(s.width, s.height, 0.0000001);
-//  }
-
+  /*
+  void testBang(Tester t) {
+    s.bigBang(s.width, s.height, 0.0000001);
+  }
+  */
+  
   boolean testAPixel(Tester t) {
     //3x3 example
     CornerSentinel corner = new CornerSentinel();
@@ -694,7 +696,7 @@ class ExamplesSeamCarver {
             Color.RED, border1, border2, border3, border4);
 
     boolean testUpdateMutation = t.checkExpect(border1.up,
-            border2)
+        border2)
             && t.checkExpect(border2.down,
             border1)
             && t.checkExpect(border1.right,
@@ -740,23 +742,23 @@ class ExamplesSeamCarver {
             0.0, .00001);
 
     boolean testEnergy = t.checkInexact(topLeft.getEnergy(),
-            .151142, .00001)
-            && t.checkInexact(topMid.getEnergy(),
-            .462530, .00001)
-            && t.checkInexact(topRight.getEnergy(),
-            .171406, .00001)
-            && t.checkInexact(midLeft.getEnergy(),
-            .765286, .00001)
-            && t.checkInexact(mid.getEnergy(),
-            .339265, .00001)
-            && t.checkInexact(midRight.getEnergy(),
-            .536250, .00001)
-            && t.checkInexact(botLeft.getEnergy(),
-            .221471, .00001)
-            && t.checkInexact(botMid.getEnergy(),
-            .738755, .00001)
-            && t.checkInexact(botRight.getEnergy(),
-            .235765, .00001);
+        0.154414, .00001)
+        && t.checkInexact(topMid.getEnergy(),
+            0.466767, .00001)
+        && t.checkInexact(topRight.getEnergy(),
+            0.171406, .00001)
+        && t.checkInexact(midLeft.getEnergy(),
+            0.731346, .00001)
+        && t.checkInexact(mid.getEnergy(),
+            0.175767, .00001)
+        && t.checkInexact(midRight.getEnergy(),
+            0.536250, .00001)
+        && t.checkInexact(botLeft.getEnergy(),
+            0.223716, .00001)
+        && t.checkInexact(botMid.getEnergy(),
+            0.741415, .00001)
+        && t.checkInexact(botRight.getEnergy(),
+            0.235765, .00001);
 
     ArrayList<ASeamInfo> firstRowInfo = topLeft.rowInfo(
             new ArrayList<>(), border3);
@@ -884,11 +886,11 @@ class ExamplesSeamCarver {
     ArrayList<ASeamInfo> finalRow = corner.getVerticalSeams();
 
     boolean testGetVertSeam = t.checkInexact(finalRow.get(0).totalWeight,
-            .711879, .00001)
-            && t.checkInexact(finalRow.get(1).totalWeight,
-            1.22916, .00001)
-            && t.checkInexact(finalRow.get(2).totalWeight,
-            .726174, .00001);
+        0.553898, .00001)
+        && t.checkInexact(finalRow.get(1).totalWeight,
+            1.071596, .00001)
+        && t.checkInexact(finalRow.get(2).totalWeight,
+            0.565947, .00001);
 
     boolean testLeastWeight = t.checkExpect(finalRow.get(0).leastWeight(finalRow.get(1)),
             finalRow.get(0))
@@ -930,11 +932,11 @@ class ExamplesSeamCarver {
     Graph g = new Graph(img);
 
     return t.checkExpect(g.corner.right.color,
-            Color.BLACK)
-            && t.checkExpect(g.corner.down.right.color,
+        Color.BLACK)
+        && t.checkExpect(g.corner.down.right.color,
             Color.WHITE)
-            && t.checkInexact(g.getVerticalSeam().totalWeight,
-            3.55688, .00001);
+        && t.checkInexact(g.getVerticalSeam().totalWeight,
+            4.724464, .00001);
   }
   
   boolean testSeamCarvingUtils(Tester t) {
@@ -1010,8 +1012,8 @@ class ExamplesSeamCarver {
     boolean energies = t.checkExpect(corner.getEnergy(), 0.0)
         && t.checkExpect(row1.getEnergy(), 0.0)
         && t.checkExpect(row3.getEnergy(), 0.0)
-        && t.checkInexact(row2.right.getEnergy(), 3.0030, 0.0001)
-        && t.checkInexact(row1.right.right.getEnergy(), 1.7950, 0.0001);
+        && t.checkInexact(row2.right.getEnergy(), 2.939752, 0.0001)
+        && t.checkInexact(row1.right.right.getEnergy(), 2.108185, 0.0001);
     
     corner.removeVertically();
     
@@ -1046,6 +1048,44 @@ class ExamplesSeamCarver {
     
     return checkInits && checkGrid && energies && testCornerRemoval
         && testRegularShiftLeft && testBorderShiftLeft;
+  }
+  
+  boolean testSeamCarver(Tester t) {
+    SeamCarver balloons = new SeamCarver("src/balloons.jpeg");
+    SeamCarver balloons2 = new SeamCarver("src/balloons.jpeg");
+    
+    boolean unpaused = t.checkExpect(balloons.paused, false);
+    balloons.onKeyEvent(" ");
+    boolean paused = t.checkExpect(balloons.paused, true);
+    WorldScene init = balloons.makeScene();
+    balloons.onTick();
+    balloons.onTick();
+    boolean tickWhilePaused = t.checkExpect(balloons.makeScene(), init)
+        && t.checkExpect(balloons.time, 0);
+    
+    balloons.onKeyEvent("v");
+    balloons2.onTick();
+    boolean checkHighlightSeam = t.checkExpect(balloons.seamToRemove, balloons2.seamToRemove)
+        && t.checkExpect(balloons.makeScene(), balloons2.makeScene())
+        && t.checkExpect(balloons.time, 1)
+        && t.checkExpect(balloons.width, 800);
+    
+    balloons.onKeyEvent("v");
+    balloons2.seamToRemove.remove();
+    balloons2.width--;
+    balloons2.time++;
+    boolean checkSeamRemoved = t.checkExpect(balloons.makeScene(), balloons2.makeScene())
+        && t.checkExpect(balloons.time, 2)
+        && t.checkExpect(balloons.width, 799);
+    
+    WorldScene init2 = balloons2.makeScene();
+    balloons2.onKeyEvent("v");
+    balloons2.onKeyEvent("v");
+    balloons2.onKeyEvent("v");
+    boolean checkKeyWhileUnpaused = t.checkExpect(balloons2.makeScene(), init2);
+    
+    return unpaused && paused && tickWhilePaused && checkHighlightSeam
+        && checkSeamRemoved && checkKeyWhileUnpaused;
   }
   
 }
