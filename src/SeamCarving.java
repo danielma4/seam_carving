@@ -53,13 +53,11 @@ class Graph {
     ArrayList<ASeamInfo> seams = this.corner.getVerticalSeams();
     return new SeamCarvingUtils().getMinWeightSeam(seams);
   }
-  
-  /*
+
   ASeamInfo getHorizontalSeam() {
     ArrayList<ASeamInfo> seams = this.corner.getHorizontalSeams();
     return new SeamCarvingUtils().getMinWeightSeam(seams);
   }
-  */
 }
 
 // Represents an abstract pixel
@@ -146,13 +144,11 @@ abstract class APixel {
     this.right.shiftLeft();
     this.left.updateRight(this.right);
   }
-  
-  /*
+
   void removeHorizontally() {
     this.down.shiftUp();
     this.up.updateDown(this.down);
   }
-  */
   
   // Shifts this pixel and all of it's rightward neightbors to the left
   void shiftLeft() {
@@ -160,25 +156,21 @@ abstract class APixel {
     this.updateUp(this.left.up);
     this.updateDown(this.left.down);
   }
-  
-  /*
+
   void shiftUp() {
     this.down.shiftUp();
     this.updateRight(this.up.right);
     this.updateLeft(this.up.left);
   }
-  */
   
   // Most APixels are not borders, and so do nothing
   void shiftLeftBorder() {
     // Intentionally blank
   }
-  
-  /*
+
   void shiftUpBorder() {
   
   }
-  */
   
   // Adds a pixel to the left of this pixel
   void addLeft(APixel newLeft) {
@@ -219,8 +211,7 @@ abstract class APixel {
       return soFar;
     }
   }
-  
-  /*
+
   ArrayList<ASeamInfo> colInfo(ArrayList<ASeamInfo> soFar, APixel start) {
     if (!this.equals(start)) {
       soFar.add(new HorizontalSeamInfo(this, this.getEnergy(), null));
@@ -229,7 +220,6 @@ abstract class APixel {
       return soFar;
     }
   }
-  */
   
   // Constructs an ArrayList of VerticalSeamInfo, with the cameFrom field based on the neighboring
   // SeamInfo of minimum weight in the previous row
@@ -242,8 +232,7 @@ abstract class APixel {
       return this.right.rowInfo(prevRow, currRow);
     }
   }
-  
-  /*
+
   ArrayList<ASeamInfo> colInfo(ArrayList<ASeamInfo> prevCol, ArrayList<ASeamInfo> currCol) {
     if (currCol.size() == prevCol.size()) {
       return currCol;
@@ -253,7 +242,6 @@ abstract class APixel {
       return this.down.colInfo(prevCol, currCol);
     }
   }
-  */
   
   // Computes the ArrayList of VerticalSeamInfo for the bottom row of a graph, where each one's
   // cameFrom field can be followed back to get the path of least weight to the top of the graph
@@ -262,14 +250,12 @@ abstract class APixel {
     ArrayList<ASeamInfo> finalRow = this.down.accumulateRows(currRow);
     return finalRow;
   }
-  
-  /*
+
   ArrayList<ASeamInfo> accumulateCols(ArrayList<ASeamInfo> prevCol) {
     ArrayList<ASeamInfo> currCol = this.down.colInfo(prevCol, new ArrayList<ASeamInfo>());
     ArrayList<ASeamInfo> finalCol = this.right.accumulateCols(currCol);
     return finalCol;
   }
-  */
 }
 
 // Represents a Sentinel pixel
@@ -305,12 +291,10 @@ abstract class ASentinel extends APixel {
   void shiftLeft() {
     // Intentionally left blank
   }
-  
-  /*
+
   void shiftUp() {
     
   }
-  */
 }
 
 // Represents a Sentinel at the corner of the grid
@@ -350,12 +334,10 @@ class CornerSentinel extends ASentinel {
   void removeVertically() {
     // Intentionally blank
   }
-  
-  /*
+
   void removeHorizontally() {
     
   }
-  */
   
   // Computes the ArrayList of VerticalSeamInfo for the bottom row of a graph, where each one's
   // cameFrom field can be followed back to get the path of least weight to the top of the graph
@@ -364,26 +346,22 @@ class CornerSentinel extends ASentinel {
     ArrayList<ASeamInfo> finalRow = this.down.accumulateRows(initialRow);
     return finalRow;
   }
-  
-  /*
+
   ArrayList<ASeamInfo> getHorizontalSeams() {
     ArrayList<ASeamInfo> initialCol = this.down.colInfo(new ArrayList<ASeamInfo>(), this);
     ArrayList<ASeamInfo> finalCol = this.right.accumulateCols(initialCol);
     return finalCol;
   }
-  */
-  
+
   // Once the accumulateRows method is called on the CornerSentinel, all SeamInfos have been
   // computed, so return the last ArrayList to be created
   ArrayList<ASeamInfo> accumulateRows(ArrayList<ASeamInfo> prevRow) {
     return prevRow;
   }
-  
-  /*
+
   ArrayList<ASeamInfo> accumulateCols(ArrayList<ASeamInfo> prevCol) {
     return prevCol;
   }
-  */
 }
 
 // Represents a Sentinel on the edge of the grid
@@ -404,13 +382,11 @@ class BorderSentinel extends ASentinel {
     this.right.shiftLeftBorder();
     this.left.updateRight(this.right);
   }
-  
-  /*
+
   void removeHorizontally() {
     this.down.shiftUpBorder();
     this.up.updateDown(this.down);
   }
-  */
   
   // Shifts this border and all the borders to the right leftwards
   void shiftLeftBorder() {
@@ -418,14 +394,12 @@ class BorderSentinel extends ASentinel {
     this.updateUp(this.left.up);
     this.updateDown(this.left.down);
   }
-  
-  /*
+
   void shiftUpBorder() {
     this.down.shiftUpBorder();
     this.updateRight(this.up.right);
     this.updateLeft(this.up.left);
   }
-  */
 }
 
 // Represents a Pixel on the grid
@@ -496,7 +470,6 @@ class VerticalSeamInfo extends ASeamInfo {
   }
 }
 
-/*
 class HorizontalSeamInfo extends ASeamInfo{
 
   HorizontalSeamInfo(APixel currentPixel, double totalWeight, ASeamInfo cameFrom) {
@@ -510,7 +483,6 @@ class HorizontalSeamInfo extends ASeamInfo{
     currentPixel.removeHorizontally();
   }
 }
-*/
 
 // Utility methods for this file
 class SeamCarvingUtils {
@@ -560,6 +532,7 @@ class SeamCarver extends World {
   int time;
   ASeamInfo seamToRemove;
   boolean paused;
+  boolean isCurrentlyVertical;
   
   // Creates a SeamCarver with the image at the given filepath
   SeamCarver(String filepath) {
@@ -583,50 +556,72 @@ class SeamCarver extends World {
   // Every tick, alternate between finding a seam to remove and coloring it red, and removing it
   public void onTick() {
     if (!paused) {
+      double randNum = Math.floor(Math.random() * 2);
       if (this.time % 2 == 0) {
-        this.seamToRemove = this.graph.getVerticalSeam(); 
+        if (randNum == 0.0) {
+          this.seamToRemove = this.graph.getVerticalSeam();
+          this.isCurrentlyVertical = true;
+        } else {
+          this.seamToRemove = this.graph.getHorizontalSeam();
+          this.isCurrentlyVertical = false;
+        }
         this.seamToRemove.paint(Color.RED);
       } else {
         this.seamToRemove.remove();
-        this.width--;
+        if (this.isCurrentlyVertical) {
+          this.width -= 1;
+        } else {
+          this.height -= 1;
+        }
       }
-      this.time++;
+      this.time += 1;
     }
   }
   
   // Space pauses/unpauses the automatic seam removal.
-  // While paused, 'v' can be pressed to move one tick forward
+  // While paused, 'v' or 'h' can be pressed to move one tick forward
   public void onKeyEvent(String key) {
     if (key.equals(" ")) {
       this.paused = !this.paused;
-    }
-    if (paused && key.equals("v")) {
-      if (this.time % 2 == 0) {
+    } else {
+      //remove case: time is odd, remove seam
+      if (paused && (key.equals("v") || key.equals("h")) && this.time % 2 == 1) {
+        this.seamToRemove.remove();
+        if (this.isCurrentlyVertical) {
+          this.width -= 1;
+        } else {
+          this.height -= 1;
+        }
+      } else if (paused && key.equals("v")) { //vertical case
         this.seamToRemove = this.graph.getVerticalSeam();
         this.seamToRemove.paint(Color.RED);
-      } else {
-        this.seamToRemove.remove();
-        this.width--;
+        this.isCurrentlyVertical = true;
+      } else if (paused && key.equals("h")) { //horizontal case
+        this.seamToRemove = this.graph.getHorizontalSeam();
+        this.seamToRemove.paint(Color.RED);
+        this.isCurrentlyVertical = false;
       }
-      this.time++;
+      time += 1;
     }
   }
   
   // The world ends once the width of the image is 1
   public boolean shouldWorldEnd() {
-    return this.width == 1;
+    return this.width == 1
+            || this.height == 1;
   }
 }
 
+//TODO: write tests for horizontal seam carving
 class ExamplesSeamCarver {
   
   SeamCarver s = new SeamCarver("src/balloons.jpeg");
   
-  /*
+
   void testBang(Tester t) {
     s.bigBang(s.width, s.height, 0.0000001);
   }
-  */
+
   
   boolean testAPixel(Tester t) {
     //3x3 example
