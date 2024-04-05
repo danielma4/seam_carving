@@ -170,63 +170,28 @@ abstract class APixel {
     that.right = this;
   }
   
-  // Removes this pixel from the grid by shifting all the rightward neighbors of this pixel left
-  void removeVertically() {
-    this.right.shiftLeft();
-    this.left.updateRight(this.right);
-  }
+  // Vertically removes this pixel from the grid
+  abstract void removeVertically();
   
-  // Inserts this pixel into the grid by shifting all the rightward neighbors of this pixel right
-  void insertVertically() {
-    this.left.updateRight(this);
-    this.right.updateLeft(this);
-    if (!(this.right instanceof BorderSentinel)) {
-      this.right.shiftRight();
-    }
-  }
+  // Vertically inserts this pixel into the grid
+  abstract void insertVertically();
   
-  // Removes this pixel from the grid by shifting all the downward neighbors of this pixel up
-  void removeHorizontally() {
-    this.down.shiftUp();
-    this.up.updateDown(this.down);
-  }
+  // Horizontally removes this pixel from the grid
+  abstract void removeHorizontally();
   
-  // Inserts this pixel into the grid by shifting all the downward neighbors of this pixel down
-  void insertHorizontally() {
-    this.down.updateUp(this);
-    this.up.updateDown(this);
-    if (!(this.down instanceof BorderSentinel)) {
-      this.down.shiftDown();
-    }
-  }
+  // Horizontally inserts this pixel into the grid
+  abstract void insertHorizontally();
   
   // Shifts this pixel and all of it's rightward neighbors to the left
-  void shiftLeft() {
-    this.right.shiftLeft();
-    this.updateUp(this.left.up);
-    this.updateDown(this.left.down);
-  }
+  abstract void shiftLeft();
   
   // Shifts this pixel and all of it's rightward neighbors to the right
-  void shiftRight() {
-    this.up.updateDown(this.left);
-    this.down.updateUp(this.left);
-    this.right.shiftRight();
-  }
-  
+  abstract void shiftRight();
   // Shifts this pixel and all of it's downward neighbors up
-  void shiftUp() {
-    this.down.shiftUp();
-    this.updateRight(this.up.right);
-    this.updateLeft(this.up.left);
-  }
+  abstract void shiftUp();
   
   // Shifts this pixel and all of it's downward neighbors down
-  void shiftDown() {
-    this.right.updateLeft(this.up);
-    this.left.updateRight(this.up);
-    this.down.shiftDown();
-  }
+  abstract void shiftDown();
   
   // Most APixels are not borders, and so do nothing
   void shiftLeftBorder() {
@@ -376,7 +341,7 @@ abstract class APixel {
   }
 }
 
-// Represents a Sentinel pixel
+// Represents a pixel that is on the edge of a grid of pixels, that is not included when rendering
 abstract class ASentinel extends APixel {
   
   // Creates a Sentinel that points to the given neighbors. The color of all Sentinels is black
@@ -466,8 +431,18 @@ class CornerSentinel extends ASentinel {
     // Intentionally blank
   }
   
+  // CornerSentinels cannot be inserted
+  void insertVertically() {
+    // Intentionally blank
+  }
+  
   // CornerSentinels cannot be removed
   void removeHorizontally() {
+    // Intentionally blank
+  }
+  
+  // CornerSentinels cannot be inserted
+  void insertHorizontally() {
     // Intentionally blank
   }
   
@@ -628,15 +603,73 @@ class Pixel extends APixel {
   Pixel(Color color) {
     super(color);
   }
+  
+  //Removes this pixel from the grid by shifting all the rightward neighbors of this pixel left
+  void removeVertically() {
+    this.right.shiftLeft();
+    this.left.updateRight(this.right);
+  }
+  
+  // Inserts this pixel into the grid by shifting all the rightward neighbors of this pixel right
+  void insertVertically() {
+    this.left.updateRight(this);
+    this.right.updateLeft(this);
+    if (!(this.right instanceof BorderSentinel)) {
+      this.right.shiftRight();
+    }
+  }
+  
+  // Removes this pixel from the grid by shifting all the downward neighbors of this pixel up
+  void removeHorizontally() {
+    this.down.shiftUp();
+    this.up.updateDown(this.down);
+  }
+  
+  // Inserts this pixel into the grid by shifting all the downward neighbors of this pixel down
+  void insertHorizontally() {
+    this.down.updateUp(this);
+    this.up.updateDown(this);
+    if (!(this.down instanceof BorderSentinel)) {
+      this.down.shiftDown();
+    }
+  }
+  
+  //Shifts this pixel and all of it's rightward neighbors to the left
+  void shiftLeft() {
+    this.right.shiftLeft();
+    this.updateUp(this.left.up);
+    this.updateDown(this.left.down);
+  }
+  
+  // Shifts this pixel and all of it's rightward neighbors to the right
+  void shiftRight() {
+    this.up.updateDown(this.left);
+    this.down.updateUp(this.left);
+    this.right.shiftRight();
+  }
+  
+  //Shifts this pixel and all of it's downward neighbors up
+  void shiftUp() {
+    this.down.shiftUp();
+    this.updateRight(this.up.right);
+    this.updateLeft(this.up.left);
+  }
+  
+  // Shifts this pixel and all of it's downward neighbors down
+  void shiftDown() {
+    this.right.updateLeft(this.up);
+    this.left.updateRight(this.up);
+    this.down.shiftDown();
+  }
 }
 
-// Represents a SeamInfo
+// Represents a info about a path from one side of the grid to the currentPixel
 abstract class ASeamInfo {
   
   APixel currentPixel;
   double totalWeight; //accumulative from start
   ASeamInfo cameFrom; //follow path back to get every pixel in the seam
-  int index;
+  int index; // Either the row or col of the seamInfo, depending on if Horizontal or Vertical
   
   // Creates an ASeamInfo with the given pixel, weight, and previous SeamInfo
   ASeamInfo(APixel currentPixel, double totalWeight, ASeamInfo cameFrom, int index) {
@@ -820,7 +853,7 @@ class SeamCarvingUtils {
   }
 }
 
-// Represents a SeamCarver
+// A program to remove seams of minimum weight from an image.
 class SeamCarver extends World {
   
   Graph graph;
