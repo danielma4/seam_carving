@@ -278,7 +278,7 @@ abstract class APixel {
     } else {
       ASeamInfo min = new SeamCarvingUtils().getMinWeightAdjacentSeam(prevRow, currRow.size());
       currRow.add(new VerticalSeamInfo(this, min.totalWeight + this.getEnergy(), min, 
-          currRow.size()));
+         currRow.size()));
       return this.right.rowInfo(prevRow, currRow);
     }
   }
