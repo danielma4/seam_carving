@@ -996,13 +996,6 @@ class ExamplesSeamCarver {
 //  }
   
   
-//  void testLosingMyMindOverUndo(Tester t) {
-//    Graph a = new Graph(new FromFileImage("r716i0full.png"));
-//    Graph b = new Graph(new FromFileImage("r719i3full.png"));
-//    t.checkExpect(a, b);
-//  }
-  
-  
   boolean testAPixel(Tester t) {
     //3x3 example
     CornerSentinel corner = new CornerSentinel();
@@ -1451,6 +1444,131 @@ class ExamplesSeamCarver {
     
     return unpaused && paused && tickWhilePaused && checkHighlightSeam
         && checkSeamRemoved && checkKeyWhileUnpaused;
+  }
+  
+  boolean testSeamCarvingMore(Tester t) {
+    SeamCarver balloons = new SeamCarver("src/balloons.jpeg");
+    boolean init = t.checkExpect(balloons.shouldWorldEnd(), false);
+    balloons.width = 1;
+    boolean end = t.checkExpect(balloons.shouldWorldEnd(), true);
+    balloons.onKeyEvent("c");
+    boolean color = t.checkExpect(balloons.renderMode, "Color");
+    balloons.onKeyEvent("e");
+    boolean energy = t.checkExpect(balloons.renderMode, "Energy");
+    balloons.onKeyEvent("g");
+    boolean grayscale = t.checkExpect(balloons.renderMode, "Grayscale");
+    balloons.onKeyEvent("V");
+    boolean vweight = t.checkExpect(balloons.renderMode, "Vertical Weight");
+    balloons.onKeyEvent("H");
+    boolean hweight = t.checkExpect(balloons.renderMode, "Horizontal Weight");
+    return init && end && color && energy && grayscale && vweight && hweight;
+  }
+  
+  boolean testConstructors(Tester t) {
+    APixel topLeft = new Pixel(Color.RED);
+    APixel top = new Pixel(Color.ORANGE);
+    APixel topRight = new Pixel(Color.YELLOW);
+    APixel left = new Pixel(Color.GREEN);
+    APixel right = new Pixel(Color.BLUE);
+    APixel botLeft = new Pixel(Color.GRAY);
+    APixel bot = new Pixel(Color.WHITE);
+    APixel botRight = new Pixel(Color.BLACK);
+    topLeft.updateRight(top);
+    top.updateRight(topRight);
+    topLeft.updateDown(left);
+    topRight.updateDown(right);
+    left.updateDown(botLeft);
+    right.updateDown(botRight);
+    botLeft.updateRight(bot);
+    bot.updateRight(botRight);
+    
+    boolean constructors = t.checkConstructorNoException("Good Construction", "Pixel",
+        Color.RED, left, right, top, bot)
+        && t.checkConstructorNoException("Good Construction", "BorderSentinel",
+            left, right, top, bot)
+        && t.checkConstructorNoException("Good Construction", "CornerSentinel",
+            left, right, top, bot);
+    
+    return constructors;
+  }
+  
+  boolean testGreatestWeight(Tester t) {
+  //3x3 example
+    CornerSentinel corner = new CornerSentinel();
+    //bottom up, left to right
+    APixel border1 = new BorderSentinel();
+    APixel border2 = new BorderSentinel();
+    APixel border3 = new BorderSentinel();
+    APixel border4 = new BorderSentinel();
+    APixel border5 = new BorderSentinel();
+    APixel border6 = new BorderSentinel();
+    APixel topLeft = new Pixel(new Color(100, 100, 100));
+    APixel topMid = new Pixel(new Color(20, 20, 10));
+    APixel topRight = new Pixel(new Color(15, 25, 75));
+    APixel midLeft = new Pixel(new Color(1, 2, 3));
+    APixel mid = new Pixel(new Color(4, 5, 6));
+    APixel midRight = new Pixel(new Color(7, 8, 9));
+    APixel botLeft = new Pixel(new Color(3, 6, 9));
+    APixel botMid = new Pixel(new Color(44, 22, 11));
+    APixel botRight = new Pixel(new Color(12, 24, 255));
+
+    //new row
+    APixel newRow1 = new Pixel(Color.RED);
+    APixel newRow2 = new Pixel(Color.GREEN);
+    APixel newRow3 = new Pixel(Color.ORANGE);
+
+    newRow1.updateRight(newRow2);
+    newRow2.updateRight(newRow3);
+
+    border1.updateRight(botLeft);
+    botLeft.updateRight(botMid);
+    botMid.updateRight(botRight);
+    botRight.updateRight(border1);
+    border2.updateRight(midLeft);
+    midLeft.updateRight(mid);
+    mid.updateRight(midRight);
+    midRight.updateRight(border2);
+    border3.updateRight(topLeft);
+    topLeft.updateRight(topMid);
+    topMid.updateRight(topRight);
+    topRight.updateRight(border3);
+    corner.updateRight(border4);
+    border4.updateRight(border5);
+    border5.updateRight(border6);
+    border6.updateRight(corner);
+
+    corner.updateDown(border3);
+    border3.updateDown(border2);
+    border2.updateDown(border1);
+    border1.updateDown(corner);
+    border4.updateDown(topLeft);
+    topLeft.updateDown(midLeft);
+    midLeft.updateDown(botLeft);
+    botLeft.updateDown(border4);
+    border5.updateDown(topMid);
+    topMid.updateDown(mid);
+    mid.updateDown(botMid);
+    botMid.updateDown(border5);
+    border6.updateDown(topRight);
+    topRight.updateDown(midRight);
+    midRight.updateDown(botRight);
+    botRight.updateDown(border6);
+
+    ArrayList<ASeamInfo> finalRow = corner.getVerticalSeams();
+    
+    boolean testGreatestWeight = t.checkExpect(finalRow.get(0).greatestWeight(finalRow.get(1)),
+        finalRow.get(1))
+        && t.checkExpect(finalRow.get(1).greatestWeight(finalRow.get(2)),
+        finalRow.get(1));
+    
+    Graph sadmarks = new Graph(new FromFileImage("src/sadmarks.png"));
+    
+    ArrayList<ASeamInfo> vertSeams = sadmarks.corner.getVerticalSeams();
+    ArrayList<ASeamInfo> horzSeams = sadmarks.corner.getHorizontalSeams();
+    SeamCarvingUtils u = new SeamCarvingUtils();
+    boolean testMaxWeightSeam = t.checkExpect(u.getMaxWeightSeam(vertSeams), vertSeams.get(125))
+        && t.checkExpect(u.getMaxWeightSeam(horzSeams), horzSeams.get(124));
+    return testGreatestWeight && testMaxWeightSeam;
   }
   
 }
