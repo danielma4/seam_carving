@@ -187,6 +187,7 @@ abstract class APixel {
   
   // Shifts this pixel and all of it's rightward neighbors to the right
   abstract void shiftRight();
+  
   // Shifts this pixel and all of it's downward neighbors up
   abstract void shiftUp();
   
@@ -269,6 +270,19 @@ abstract class APixel {
     }
   }
   
+  // Constructs an ArrayList of VerticalSeamInfo, with the cameFrom field based on the neighboring
+  // SeamInfo of minimum weight in the previous row
+  ArrayList<ASeamInfo> rowInfo(ArrayList<ASeamInfo> prevRow, ArrayList<ASeamInfo> currRow) {
+    if (currRow.size() == prevRow.size()) {
+      return currRow;
+    } else {
+      ASeamInfo min = new SeamCarvingUtils().getMinWeightAdjacentSeam(prevRow, currRow.size());
+      currRow.add(new VerticalSeamInfo(this, min.totalWeight + this.getEnergy(), min, 
+         currRow.size()));
+      return this.right.rowInfo(prevRow, currRow);
+    }
+  }
+  
   // Constructs an ArrayList of HorizontalSeamInfo with their cameFrom field initialized to null,
   // stopping once the starting pixel is reached
   ArrayList<ASeamInfo> colInfo(ArrayList<ASeamInfo> soFar, APixel start) {
@@ -280,18 +294,6 @@ abstract class APixel {
     }
   }
   
-  // Constructs an ArrayList of VerticalSeamInfo, with the cameFrom field based on the neighboring
-  // SeamInfo of minimum weight in the previous row
-  ArrayList<ASeamInfo> rowInfo(ArrayList<ASeamInfo> prevRow, ArrayList<ASeamInfo> currRow) {
-    if (currRow.size() == prevRow.size()) {
-      return currRow;
-    } else {
-      ASeamInfo min = new SeamCarvingUtils().getMinWeightAdjacentSeam(prevRow, currRow.size());
-      currRow.add(new VerticalSeamInfo(this, min.totalWeight + this.getEnergy(), min, currRow.size()));
-      return this.right.rowInfo(prevRow, currRow);
-    }
-  }
-  
   // Constructs an ArrayList of HorizontalSeamInfo, with the cameFrom field based on the neighboring
   // SeamInfo of minimum weight in the previous col
   ArrayList<ASeamInfo> colInfo(ArrayList<ASeamInfo> prevCol, ArrayList<ASeamInfo> currCol) {
@@ -299,7 +301,8 @@ abstract class APixel {
       return currCol;
     } else {
       ASeamInfo min = new SeamCarvingUtils().getMinWeightAdjacentSeam(prevCol, currCol.size());
-      currCol.add(new HorizontalSeamInfo(this, min.totalWeight + this.getEnergy(), min, currCol.size()));
+      currCol.add(new HorizontalSeamInfo(this, min.totalWeight + this.getEnergy(), min,
+          currCol.size()));
       return this.down.colInfo(prevCol, currCol);
     }
   }
@@ -760,7 +763,7 @@ class VerticalSeamInfo extends ASeamInfo {
 }
 
 // Represents a SeamInfo from the left to the right sides of an image
-class HorizontalSeamInfo extends ASeamInfo{
+class HorizontalSeamInfo extends ASeamInfo {
 
   HorizontalSeamInfo(APixel currentPixel, double totalWeight, ASeamInfo cameFrom, int col) {
     super(currentPixel, totalWeight, cameFrom, col);
@@ -935,15 +938,15 @@ class SeamCarver extends World {
   public void onKeyEvent(String key) {
     if (key.equals(" ")) {
       this.paused = !this.paused;
-    } else if(key.equals("c")) {
+    } else if (key.equals("c")) {
       this.renderMode = "Color";
-    } else if(key.equals("e")) {
+    } else if (key.equals("e")) {
       this.renderMode = "Energy";
-    } else if(key.equals("g")) {
+    } else if (key.equals("g")) {
       this.renderMode = "Grayscale";
-    } else if(key.equals("V")) {
+    } else if (key.equals("V")) {
       this.renderMode = "Vertical Weight";
-    } else if(key.equals("H")) {
+    } else if (key.equals("H")) {
       this.renderMode = "Horizontal Weight";
     } else {
       //remove case: time is odd, remove seam
@@ -985,16 +988,14 @@ class SeamCarver extends World {
   }
 }
 
-//TODO: write tests for horizontal seam carving
 class ExamplesSeamCarver {
   
   SeamCarver s = new SeamCarver("src/balloons.jpeg");
   
   
-//  void testBang(Tester t) {
-//    s.bigBang(s.width, s.height, 0.0000001);
-//  }
-  
+  //void testBang(Tester t) {
+  //  s.bigBang(s.width, s.height, 0.0000001);
+  //}
   
   boolean testAPixel(Tester t) {
     //3x3 example
@@ -1493,7 +1494,7 @@ class ExamplesSeamCarver {
   }
   
   boolean testGreatestWeight(Tester t) {
-  //3x3 example
+    //3x3 example
     CornerSentinel corner = new CornerSentinel();
     //bottom up, left to right
     APixel border1 = new BorderSentinel();
